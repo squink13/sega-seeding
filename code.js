@@ -1,6 +1,7 @@
+const clientId = "YOUR_CLIENT_ID";
+const clientSecret = "YOUR_CLIENT_SECRET";
+
 let startTime = new Date();
-let clientId = "YOUR_CLIENT_ID";
-let clientSecret = "YOUR_CLIENT_SECRET";
 
 const SS = SpreadsheetApp.getActiveSpreadsheet();
 const PROPERTIES = PropertiesService.getScriptProperties();
@@ -45,7 +46,10 @@ function main() {
 
 function parsePlayers(importSheetName, exportSheetName) {
   let importedPlayers = readData(importSheetName);
-  let players = [];
+
+  let playersJson = PROPERTIES.getProperty("players");
+  let players = playersJson ? JSON.parse(playersJson) : [];
+
   let badges, player, osuData;
   let start = parseInt(PROPERTIES.getProperty("start")) || 0;
 
@@ -80,24 +84,26 @@ function parsePlayers(importSheetName, exportSheetName) {
     }
 
     players.push(player);
-    // Set the property for the next starting point
-    PROPERTIES.setProperty("start", i + 1);
 
-    // You can also add a termination condition based on script execution time
-    // to prevent reaching the maximum execution time limit.
-    // For example, terminate if the script has been running for over 5 minutes:
     if (new Date().getTime() - startTime.getTime() > 300000) {
       Logger.log("Execution time limit approaching, terminating script...");
+
+      // Set the property for the next starting point
+      PROPERTIES.setProperty("start", i + 1);
+      // Store players data before terminating
+      PROPERTIES.setProperty("players", JSON.stringify(players));
+
       return;
     }
   }
 
-  // Clear the property after all rows are processed
+  // Clear the properties after all rows are processed
   PROPERTIES.deleteProperty("start");
-  printPlayersData(players, exportSheetName);
+  PROPERTIES.deleteProperty("players");
+  writePlayersData(players, exportSheetName);
 }
 
-function printPlayersData(players, sheetName) {
+function writePlayersData(players, sheetName) {
   let sheet = SS.getSheetByName(sheetName);
   if (!sheet) {
     sheet = SS.insertSheet(sheetName);

@@ -1,3 +1,4 @@
+let startTime = new Date();
 let clientId = "YOUR_CLIENT_ID";
 let clientSecret = "YOUR_CLIENT_SECRET";
 
@@ -46,7 +47,9 @@ function parsePlayers(importSheetName, exportSheetName) {
   let importedPlayers = readData(importSheetName);
   let players = [];
   let badges, player, osuData;
-  for (let i = 0; i < importedPlayers.length; i++) {
+  let start = parseInt(PROPERTIES.getProperty("start")) || 0;
+
+  for (let i = start; i < importedPlayers.length; i++) {
     badges = 0;
     player = importedPlayers[i];
     osuData = getOsuData(player.userId);
@@ -77,8 +80,20 @@ function parsePlayers(importSheetName, exportSheetName) {
     }
 
     players.push(player);
+    // Set the property for the next starting point
+    PROPERTIES.setProperty("start", i + 1);
+
+    // You can also add a termination condition based on script execution time
+    // to prevent reaching the maximum execution time limit.
+    // For example, terminate if the script has been running for over 5 minutes:
+    if (new Date().getTime() - startTime.getTime() > 300000) {
+      Logger.log("Execution time limit approaching, terminating script...");
+      return;
+    }
   }
 
+  // Clear the property after all rows are processed
+  PROPERTIES.deleteProperty("start");
   printPlayersData(players, exportSheetName);
 }
 
